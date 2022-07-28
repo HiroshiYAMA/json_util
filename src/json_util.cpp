@@ -40,11 +40,11 @@ namespace fs = std::filesystem;
 #include "json.hpp"
 using njson = nlohmann::json;
 
-bool json2lens(const fs::path &filename)
+bool json2dat(const fs::path &filename)
 {
-    constexpr auto ext_lens = "lens";
-    fs::path fn_lens = filename;
-    fn_lens.replace_extension(ext_lens);
+    constexpr auto ext_dat = "dat";
+    fs::path fn_dat = filename;
+    fn_dat.replace_extension(ext_dat);
 
     // read JSON file.
     std::ifstream ifs(filename.c_str());
@@ -55,10 +55,10 @@ bool json2lens(const fs::path &filename)
     njson json_list = {};
     ifs >> json_list;
 
-    // write lens(CBOR) file.
-    std::ofstream ofs(fn_lens, std::ios::binary);
+    // write dat(CBOR) file.
+    std::ofstream ofs(fn_dat, std::ios::binary);
     if (!ofs.is_open()) {
-        std::cout << "ERROR!! can't open LENS file(" << fn_lens << ")." << std::endl;
+        std::cout << "ERROR!! can't open DAT file(" << fn_dat << ")." << std::endl;
         return false;
     }
     auto cbor_list = njson::to_cbor(json_list);
@@ -67,16 +67,16 @@ bool json2lens(const fs::path &filename)
     return true;
 }
 
-bool lens2json(const fs::path &filename)
+bool dat2json(const fs::path &filename)
 {
     constexpr auto ext_json = "json";
     fs::path fn_json = filename;
     fn_json.replace_extension(ext_json);
 
-    // read lens(CBOR) file.
+    // read dat(CBOR) file.
     std::ifstream ifs(filename.c_str(), std::ios::binary);
     if (!ifs.is_open()) {
-        std::cout << "ERROR!! can't open LENS file(" << filename << ")." << std::endl;
+        std::cout << "ERROR!! can't open DAT file(" << filename << ")." << std::endl;
         return false;
     }
     auto sz = fs::file_size(filename);
@@ -98,8 +98,8 @@ bool lens2json(const fs::path &filename)
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
-        std::cout << "usage: json_util <hogehoge.json | fugafuga.lens>" << std::endl;
-        std::cout << "    Convert fileformat json <---> lens." << std::endl;
+        std::cout << "usage: json_util <hogehoge.json | fugafuga.dat>" << std::endl;
+        std::cout << "    Convert fileformat json <---> dat." << std::endl;
         exit(EXIT_FAILURE);
     }
 
@@ -115,13 +115,13 @@ int main(int argc, char *argv[])
     std::transform(ext_str.cbegin(), ext_str.cend(), ext_str.begin(), ::tolower);
 
     if (ext_str == ".json") {
-        if (!json2lens(filename)) {
-            std::cout << "ERROR!! can't convert JSON -> LENS." << std::endl;
+        if (!json2dat(filename)) {
+            std::cout << "ERROR!! can't convert JSON -> DAT." << std::endl;
             exit(EXIT_FAILURE);
         }
-    } else if (ext_str == ".lens") {
-        if (!lens2json(filename)) {
-            std::cout << "ERROR!! can't convert LENS -> JSON." << std::endl;
+    } else if (ext_str == ".dat") {
+        if (!dat2json(filename)) {
+            std::cout << "ERROR!! can't convert DAT -> JSON." << std::endl;
             exit(EXIT_FAILURE);
         }
     } else {
