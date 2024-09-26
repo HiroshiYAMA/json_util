@@ -40,11 +40,22 @@ namespace fs = std::filesystem;
 #include "json.hpp"
 using njson = nlohmann::json;
 
-bool json2dat(const fs::path &filename)
+static bool opt_force_float32 = false;
+
+bool json2dat(const fs::path &filename, bool force_float32 = false)
 {
     constexpr auto ext_dat = "dat";
     fs::path fn_dat = filename;
     fn_dat.replace_extension(ext_dat);
+
+    njson::parser_callback_t cb = [](int depth, njson::parse_event_t event, njson & parsed) -> bool {
+        if (event == njson::parse_event_t::value and parsed.is_number_float()) {
+            auto val = parsed.get<float>();
+            parsed = val;
+        }
+
+        return true;
+    };
 
     // read JSON file.
     std::ifstream ifs(filename.c_str());
@@ -53,7 +64,11 @@ bool json2dat(const fs::path &filename)
         return false;
     }
     njson json_list = {};
-    ifs >> json_list;
+    if (force_float32) {
+        json_list = njson::parse(ifs, cb);
+    } else {
+        ifs >> json_list;
+    }
 
     // write dat(CBOR) file.
     std::ofstream ofs(fn_dat, std::ios::binary);
@@ -98,12 +113,22 @@ bool dat2json(const fs::path &filename)
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
-        std::cout << "usage: json_util <hogehoge.json | fugafuga.dat>" << std::endl;
+        std::cout << "usage: json_util [option] <hogehoge.json | fugafuga.dat>" << std::endl;
         std::cout << "    Convert fileformat json <---> dat." << std::endl;
+        std::cout << "    option:" << std::endl;
+        std::cout << "    ---" << std::endl;
+        std::cout << "    -f: [json -> dat] using float32 to convert from JSON to binary." << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    auto filename = fs::path{argv[1]};
+    fs::path filename;
+    if (argc == 3) {
+        if (std::string{argv[1]} == "-f") opt_force_float32 = true;
+        filename = fs::path{argv[2]};
+    } else {
+        filename = fs::path{argv[1]};
+    }
+
     std::error_code ec;
     if (!fs::is_regular_file(filename, ec)) {
         std::cout << "ERROR!! file not found(" << filename << ")." << std::endl;
@@ -115,7 +140,7 @@ int main(int argc, char *argv[])
     std::transform(ext_str.cbegin(), ext_str.cend(), ext_str.begin(), ::tolower);
 
     if (ext_str == ".json") {
-        if (!json2dat(filename)) {
+        if (!json2dat(filename, opt_force_float32)) {
             std::cout << "ERROR!! can't convert JSON -> DAT." << std::endl;
             exit(EXIT_FAILURE);
         }
